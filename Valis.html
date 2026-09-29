@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Valis — a language with its own numerals</title>
+<style>
+:root{--bg:#10163a;--panel:#171f4d;--ink:#e6e8ff;--dim:#8f96cf;--hot:#ff5c8a;--line:#2a3470;--ok:#9be7c4;--code:#0b1029}
+:root:not([data-theme="light"]){}
+@media(prefers-color-scheme:light){:root:not([data-theme="dark"]){--bg:#f4f5ff;--panel:#fff;--ink:#141a45;--dim:#5a618f;--hot:#d6245c;--line:#cfd3f0;--ok:#0b7a54;--code:#eef0ff}}
+:root[data-theme="dark"]{--bg:#10163a}
+*{box-sizing:border-box}
+html,body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.6 ui-monospace,Menlo,Consolas,monospace}
+:root{padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+main{max-width:980px;margin:0 auto;padding:40px 18px 80px}
+h1{font-family:Georgia,serif;font-size:clamp(44px,10vw,96px);line-height:1;margin:0 0 8px}
+h1 em{color:var(--hot)}
+h2{font-family:Georgia,serif;font-size:24px;margin:44px 0 12px}
+.sub{color:var(--dim);max-width:62ch}
+.law{background:var(--panel);border:1px solid var(--hot);border-radius:6px;padding:14px 18px;font-family:Georgia,serif;font-size:clamp(18px,3.4vw,28px)}
+.law b,.eq b{color:var(--hot)}
+.panel{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:18px;display:grid;gap:10px}
+.glyphs{display:grid;grid-template-columns:repeat(10,1fr);gap:6px;text-align:center}
+.glyphs div{border:1px solid var(--line);border-radius:4px;padding:6px 0}
+.glyphs b{display:block;font-size:26px;color:var(--hot)}
+.glyphs span{color:var(--dim);font-size:13px}
+input[type=range]{width:100%;accent-color:var(--hot)}
+input[type=text]{font:inherit;background:var(--code);color:var(--ink);border:1px solid var(--line);border-radius:4px;padding:8px;width:100%}
+.out{color:var(--ok);word-break:break-all}
+.bar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;align-items:center}
+button{font:inherit;background:var(--hot);color:#1a0a14;border:0;border-radius:4px;padding:8px 14px;cursor:pointer;font-weight:700}
+button.g{background:transparent;color:var(--ink);border:1px solid var(--line)}
+button.g.on{border-color:var(--hot);color:var(--hot)}
+button:focus-visible,textarea:focus-visible,input:focus-visible{outline:2px solid var(--ink);outline-offset:2px}
+.ide{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:720px){.ide{grid-template-columns:1fr}.glyphs{grid-template-columns:repeat(5,1fr)}}
+textarea,pre{margin:0;width:100%;min-height:360px;background:var(--code);color:var(--ink);border:1px solid var(--line);border-radius:6px;padding:14px;font:inherit;resize:vertical;white-space:pre-wrap;overflow:auto}
+pre.err{color:var(--hot)}
+table{border-collapse:collapse;width:100%}
+td,th{text-align:left;padding:6px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+th{color:var(--dim);font-weight:400}
+code{color:var(--hot)}
+.tw{overflow-x:auto}
+</style></head><body><main>
+<h1>Va<em>l</em>is</h1>
+<p class="sub">A programming language that writes numbers in its own symbols. There is no digit <code>1</code> here: one is <code>]</code>, and ten is <code>][</code>.</p>
+
+<div class="law">Setting <b>Valis = ]</b> (that is, 1) we have <b>E = Valis · m · c²</b></div>
+
+<h2>The numerals</h2>
+<div class="panel"><div class="glyphs" id="gl"></div>
+<label>Translate a decimal number: <input type="text" id="tr" value="299792458"></label>
+<div class="out" id="trout"></div></div>
+
+<h2>E = Valis · m · c²</h2>
+<div class="panel">
+  <label>mass m = <span id="mv"></span> kg <input id="ms" type="range" min="0" max="6" step="0.01" value="0"></label>
+  <div>E = <span class="out" id="ev"></span> joules</div>
+  <div style="color:var(--dim)">decimal: <span id="ed"></span></div>
+</div>
+
+<h2>Examples</h2>
+<div class="bar" id="ex"></div>
+<div class="bar">
+  <button id="run">Run</button>
+  <button class="g" id="dec">Output: Valis glyphs</button>
+  <button class="g" id="save">Save as .valis</button>
+  <button class="g" id="open">Open .valis</button>
+  <input type="file" id="file" accept=".valis,text/plain" hidden>
+</div>
+<div class="ide"><textarea id="src" spellcheck="false" aria-label="Valis program"></textarea><pre id="out" aria-live="polite"></pre></div>
+
+<h2>Language reference</h2>
+<div class="tw"><table>
+<tr><th>Form</th><th>Meaning</th></tr>
+<tr><td><code>let x = expr</code></td><td>Bind a variable</td></tr>
+<tr><td><code>print expr, ...</code></td><td>Print values</td></tr>
+<tr><td><code>fn f(a, b) = expr</code></td><td>Define a function</td></tr>
+<tr><td><code>repeat n {</code> … <code>}</code></td><td>Loop n times (<code>i</code> counts from <code>]</code>)</td></tr>
+<tr><td><code>if a &gt; b {</code> … <code>} else {</code> … <code>}</code></td><td>Branch (nestable)</td></tr>
+<tr><td><code>valis</code>, <code>c</code>, <code>E(m)</code></td><td>Standard: ], @&amp;$%@$#$|, and valis·m·c² — fixed, cannot be changed</td></tr>
+<tr><td><code>sqrt abs sin cos log round min max</code></td><td>Built-in functions</td></tr>
+<tr><td><code>+ - * / mod ^</code> and <code>&lt; &gt; &lt;= &gt;= == &lt;&gt;</code></td><td>Operators (<code>^</code> power, <code>mod</code> remainder, <code>&lt;&gt;</code> not equal). Comments start with <code>~</code></td></tr>
+</table></div>
+<p class="sub">Because <code>%</code> <code>!</code> <code>#</code> are digits, they can't be operators or comment marks — hence <code>mod</code>, <code>&lt;&gt;</code> and <code>~</code>. </p>
+</main>
+<script>
+"use strict";
+const GL="[]!@#$%&|?", C=299792458;
+const toG=s=>String(s).replace(/\d/g,d=>GL[d]);
+const NUM=new RegExp("[\\[\\]!@#$%&|?]+(?:\\.[\\[\\]!@#$%&|?]*)?");
+let glyphOut=true;
+const fmt=n=>{ if(typeof n!=="number")return String(n);
+  const s=Number.isInteger(n)&&Math.abs(n)<1e15?String(n):Math.abs(n)>=1e9||(n!==0&&Math.abs(n)<1e-4)?n.toExponential(6):String(+n.toFixed(8));
+  return glyphOut?toG(s):s; };
+
+function tokenize(s){
+  const re=new RegExp("\\s*(?:("+NUM.source+")|([A-Za-z_]\\w*)|(<=|>=|==|<>|[-+*\\/^()<>,]))","gy");
+  const out=[];let m,last=0;
+  while(last<s.length&&(m=re.exec(s))){last=re.lastIndex;
+    if(m[1])out.push({t:"n",v:parseFloat([...m[1]].map(ch=>ch==="."?".":GL.indexOf(ch)).join(""))});
+    else if(m[2])out.push(m[2]==="mod"?{t:"op",v:"%"}:{t:"id",v:m[2]});
+    else out.push({t:"op",v:m[3]});}
+  if(s.slice(last).trim())throw new Error("Unexpected character near '"+s.slice(last).trim()[0]+"'");
+  return out;}
+function parseExpr(src){
+  const T=tokenize(src);let p=0;
+  const isOp=v=>T[p]&&T[p].t==="op"&&T[p].v===v;
+  const bin=(next,ops)=>()=>{let l=next();while(T[p]&&T[p].t==="op"&&ops.includes(T[p].v)){const o=T[p++].v;l={k:"b",o,l,r:next()};}return l;};
+  function prim(){const t=T[p++];if(!t)throw new Error("Expression ended early");
+    if(t.t==="n")return{k:"n",v:t.v};
+    if(t.t==="id"){if(isOp("(")){p++;const a=[];if(!isOp(")"))do{a.push(cmp());}while(isOp(",")&&p++);if(!isOp(")"))throw new Error("Missing )");p++;return{k:"c",f:t.v,a};}return{k:"v",n:t.v};}
+    if(t.v==="("){const e=cmp();if(!isOp(")"))throw new Error("Missing )");p++;return e;}
+    if(t.v==="-")return{k:"neg",e:unary()};
+    throw new Error("Unexpected '"+t.v+"'");}
+  function pow(){const b=prim();if(isOp("^")){p++;return{k:"b",o:"^",l:b,r:unary()};}return b;}
+  function unary(){if(isOp("-")){p++;return{k:"neg",e:unary()};}return pow();}
+  const mul=bin(unary,["*","/","%"]),add=bin(mul,["+","-"]);
+  function cmp(){return bin(add,["<",">","<=",">=","==","<>"])();}
+  const e=cmp();if(p<T.length)throw new Error("Unexpected '"+T[p].v+"'");return e;}
+
+const BUILTIN={sqrt:Math.sqrt,abs:Math.abs,sin:Math.sin,cos:Math.cos,log:Math.log,round:Math.round,min:Math.min,max:Math.max};
+function evalE(e,env,fns){
+  switch(e.k){
+    case"n":return e.v;
+    case"v":if(e.n in env)return env[e.n];throw new Error("Unknown name '"+e.n+"'");
+    case"neg":return -evalE(e.e,env,fns);
+    case"b":{const a=evalE(e.l,env,fns),b=evalE(e.r,env,fns);
+      switch(e.o){case"+":return a+b;case"-":return a-b;case"*":return a*b;
+        case"/":if(b===0)throw new Error("Division by zero");return a/b;
+        case"%":return a%b;case"^":return Math.pow(a,b);
+        case"<":return +(a<b);case">":return +(a>b);case"<=":return +(a<=b);
+        case">=":return +(a>=b);case"==":return +(a===b);case"<>":return +(a!==b);}}
+    case"c":{const args=e.a.map(x=>evalE(x,env,fns));
+      if(fns[e.f]){const f=fns[e.f];if(args.length!==f.p.length)throw new Error(e.f+" takes "+f.p.length+" argument(s)");const local=Object.assign({},env);f.p.forEach((n,i)=>local[n]=args[i]);return evalE(f.body,local,fns);}
+      if(BUILTIN[e.f])return BUILTIN[e.f](...args);
+      throw new Error("Unknown function '"+e.f+"'");}}}
+
+function run(program){
+  const out=[],env={valis:1,c:C},fns={E:{p:["m"],body:parseExpr("valis * m * c ^ "+GL[2])}};
+  const lines=program.split("\n").map(l=>l.replace(/~.*/,"").trim());let steps=0;
+  function block(i){const st=[];
+    while(i<lines.length){const l=lines[i];if(!l){i++;continue;}if(l[0]==="}")break;let m;
+      if((m=l.match(/^(repeat|if)\s+(.+?)\s*\{$/))){
+        const[body,j]=block(i+1);let els=null,k=j;
+        if(lines[k]===undefined)throw new Error("Line "+(i+1)+": missing }");
+        if(m[1]==="if"&&/^\}\s*else\s*\{$/.test(lines[k])){const r=block(k+1);els=r[0];k=r[1];if(lines[k]===undefined)throw new Error("Line "+(i+1)+": missing }");}
+        st.push({t:m[1],e:parseExpr(m[2]),body,els,ln:i+1});i=k+1;
+      }else{st.push({t:"line",s:l,ln:i+1});i++;}}
+    return[st,i];}
+  function exec(sts){
+    for(const s of sts){
+      if(++steps>200000)throw new Error("Program stopped after 200000 steps");
+      try{
+        if(s.t==="repeat"){const n=Math.floor(evalE(s.e,env,fns));for(let k=1;k<=n;k++){env.i=k;exec(s.body);}}
+        else if(s.t==="if"){if(evalE(s.e,env,fns))exec(s.body);else if(s.els)exec(s.els);}
+        else{let m;const l=s.s;
+          if((m=l.match(/^let\s+([A-Za-z_]\w*)\s*=\s*(.+)$/))){
+            if(m[1]==="valis")throw new Error("valis is fixed at "+GL[1]);
+            if(m[1]==="c")throw new Error("c is fixed");
+            env[m[1]]=evalE(parseExpr(m[2]),env,fns);
+          }else if((m=l.match(/^fn\s+([A-Za-z_]\w*)\s*\(([^)]*)\)\s*=\s*(.+)$/))){
+            if(m[1]==="E")throw new Error("E is part of the standard and cannot be redefined");
+            fns[m[1]]={p:m[2].split(",").map(x=>x.trim()).filter(Boolean),body:parseExpr(m[3])};
+          }else if((m=l.match(/^print\s+(.+)$/))){
+            out.push(splitArgs(m[1]).map(a=>fmt(evalE(parseExpr(a),env,fns))).join("  "));
+          }else throw new Error("Unrecognised statement: "+l);}
+      }catch(e){if(!/^Line /.test(e.message))e.message="Line "+s.ln+": "+e.message;throw e;}}}
+  try{const[sts,end]=block(0);if(end<lines.length)throw new Error("Line "+(end+1)+": unexpected }");exec(sts);return{out:out.join("\n")};}
+  catch(e){return{out:out.join("\n"),err:e.message};}}
+function splitArgs(s){const a=[];let d=0,cur="";for(const ch of s){if(ch==="(")d++;if(ch===")")d--;if(ch===","&&d===0){a.push(cur);cur="";}else cur+=ch;}a.push(cur);return a;}
+
+// Examples are written in decimal here and displayed in Valis glyphs.
+const EX={
+"Hello, Valis":`~ every program knows E = valis * m * c^2
+print valis
+print c
+let m = 1
+print E(m)`,
+"Mass ladder":`~ from 10 grams to a million tons
+repeat 6 {
+  print 10 ^ i, E(10 ^ i)
+}`,
+"Fibonacci":`let a = 0
+let b = 1
+repeat 15 {
+  print a
+  let t = a + b
+  let a = b
+  let b = t
+}`,
+"Newton sqrt 2":`let x = 1
+repeat 6 {
+  let x = (x + 2 / x) / 2
+  print x
+}
+print sqrt(2)`,
+"Multiples":`~ multiples of 3 or 5 up to 30
+let total = 0
+repeat 30 {
+  if i mod 3 == 0 {
+    let total = total + i
+  } else {
+    if i mod 5 == 0 {
+      let total = total + i
+    }
+  }
+}
+print total`,
+"Collatz 27":`let n = 27
+let steps = 0
+repeat 300 {
+  if n <> 1 {
+    if n mod 2 == 0 {
+      let n = n / 2
+    } else {
+      let n = 3 * n + 1
+    }
+    let steps = steps + 1
+  }
+}
+print steps`,
+"The Sun":`~ the Sun radiates about 3.8e26 watts
+fn massOf(energy) = energy / c ^ 2
+print massOf(380000000000000000000000000)
+~ so it loses billions of kilograms every second`,
+"One gram":`~ 1 gram of mass, in tons of TNT (4.184e9 joules per ton)
+print E(0.001) / 4184000000
+fn kinetic(mass, v) = 0.5 * mass * v ^ 2
+print kinetic(2, 3)`
+};
+const $=id=>document.getElementById(id),src=$("src"),out=$("out");
+function load(name){src.value=EX[name].replace(/\d+(?:\.\d+)?/g,n=>toG(n));go();}
+function go(){const r=run(src.value);out.className="";out.textContent=r.out;if(r.err){out.className="err";out.textContent+=(r.out?"\n":"")+r.err;}}
+$("gl").innerHTML=[...GL].map((g,i)=>`<div><b>${g.replace("&","&amp;")}</b><span>${i}</span></div>`).join("");
+Object.keys(EX).forEach(k=>{const b=document.createElement("button");b.className="g";b.type="button";b.textContent=k;b.addEventListener("click",()=>{load(k);if(src.scrollIntoView)src.scrollIntoView({block:"center",behavior:"smooth"});});$("ex").appendChild(b);});
+$("run").onclick=go;
+$("dec").onclick=e=>{glyphOut=!glyphOut;e.target.textContent="Output: "+(glyphOut?"Valis glyphs":"decimal");go();};
+src.addEventListener("keydown",e=>{if((e.metaKey||e.ctrlKey)&&e.key==="Enter")go();});
+$("save").onclick=()=>{const a=document.createElement("a");a.href=URL.createObjectURL(new Blob([src.value],{type:"text/plain"}));a.download="program.valis";a.click();};
+$("open").onclick=()=>$("file").click();
+$("file").onchange=e=>{const f=e.target.files[0];if(f)f.text().then(t=>{src.value=t;go();});};
+$("tr").oninput=e=>{const v=e.target.value.trim();$("trout").textContent=/^\d+(\.\d*)?$/.test(v)?toG(v):"digits only";};
+const ms=$("ms");
+function upd(){const m=Math.pow(10,+ms.value),e=m*C*C;
+  $("mv").textContent=toG(+m.toPrecision(3));
+  $("ev").textContent=toG(e<1e15?+e.toPrecision(6):e.toExponential(4));
+  $("ed").textContent=e<1e15?String(+e.toPrecision(6)):e.toExponential(4);}
+ms.oninput=upd;$("tr").oninput({target:$("tr")});upd();load("Hello, Valis");
+</script></body></html>
